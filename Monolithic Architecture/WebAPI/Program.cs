@@ -8,9 +8,10 @@ using WebAPI.Security.Jwt;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddWebApiServices(builder.Configuration);
-
 builder.Services.AddControllers();
+builder.Services.AddWebApiServices(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
+
 TokenOptions? tokenOptions = builder.Configuration.GetSection("TokenOptions").Get<TokenOptions>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
