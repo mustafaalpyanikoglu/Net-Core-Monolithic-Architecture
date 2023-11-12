@@ -14,6 +14,12 @@ using System.Configuration;
 using WebAPI.Contexts;
 using WebAPI.Repositories.Abstract;
 using WebAPI.Repositories.Concrete;
+using BusinessLayer.Services.AuthService;
+using BusinessLayer.Services.ImageService;
+using BusinessLayer.Services.UserService;
+using Infrastructure.Adapters.ImageService;
+using Core.Mailing.MailKitImplementations;
+using Core.Mailing;
 
 namespace BusinessLayer;
 
@@ -34,8 +40,14 @@ public static class WebApiServiceRegistration
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
+        services.AddScoped<ImageServiceBase, CloudinaryImageServiceAdapter>();
+        services.AddScoped<IAuthService, AuthManager>();
+        services.AddScoped<IUserService, UserManager>();
+
         services.AddSingleton<LoggerServiceBase, MsSqlLogger>();
         //services.AddSingleton<LoggerServiceBase, FileLogger>();
+
+        services.AddSingleton<IMailService, MailKitMailService>();
 
         #region Security
         services.AddScoped<ITokenHelper, JwtHelper>();
@@ -49,10 +61,16 @@ public static class WebApiServiceRegistration
             options.UseSqlServer(configuration.GetConnectionString("DBConnectionString"));
             options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
         });
-
         services.AddScoped<IOperationClaimRepository, OperationClaimRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserOperationClaimRepository, UserOperationClaimRepository>();
+        services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<ICustomerWarehouseCostRepository, CustomerWarehouseCostRepository>();
+        services.AddScoped<IEmailAuthenticatorRepository, EmailAuthenticatorRepository>();
+        services.AddScoped<IOtpAuthenticatorRepository, OtpAuthenticatorRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+
         #endregion
 
         return services;

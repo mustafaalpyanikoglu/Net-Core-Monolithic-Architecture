@@ -68,12 +68,17 @@
 		<!-- Data Access -->
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.19" />
 		<!-- /Data Access -->
+		
+		<!-- Mailing -->
+		<PackageReference Include="MailKit" Version="3.1.1" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
+		<PackageReference Include="MimeKit" Version="3.1.1" />
+		<!-- /Mailing -->
+
+		<!-- Infrastructure -->
+		<PackageReference Include="CloudinaryDotNet" Version="1.20.0" />
+		<!-- Infrastructure -->
 	</ItemGroup>
-	
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="Models\Enums\" />
-    <Folder Include="Services\" />
-  </ItemGroup>
 
 </Project>
