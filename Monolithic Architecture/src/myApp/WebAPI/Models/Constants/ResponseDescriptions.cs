@@ -6,7 +6,7 @@ public static class ResponseDescriptions
 
 
     #region Auth Descriptions
-
+    public const string SERVER_ERROR = "Server error";
     public const string AUTH_LOGIN = "Login işleminde kullanıcı bulunmazsa 401 fırlatır. Error Codes : INVALID_USER ve USER_DELETED hata kodları gelebilir.";
     public const string AUTH_REFRESHTOKEN = "Refresh token işleminde token ve kullanıcı bulunmazsa 400 fırlatır. Error Codes : INVALID_TOKEN, INVALID_USER ve USER_DELETED hata kodları gelebilir.";
     public const string AUTH_REGISTER =
@@ -25,6 +25,9 @@ public static class ResponseDescriptions
     public const string EMAIL_NOT_FOUND = "Email not found";
     public const string USER_DEACTIVE = "User deactive";
     public const string PASSWORD_DONT_MATCH = "Password don't match.";
+    public const string USER_EMAL_ALREADY_EXISTS = "User email already exists";
+    public const string FAILED_TO_SAVE_USER = "Failed to save user to the database";
+
 
     #endregion
 
@@ -39,6 +42,17 @@ public static class ResponseDescriptions
 
     #endregion
 
+    #region Customer descriptions
+    public const string CUSTOMER_NOT_FOUND = "Customer not found.";
+    #endregion
+
+    #region Warehouse descriptions
+    public const string WAREHOUSE_NOT_FOUND = "Warehouse not found.";
+    #endregion
+
+    #region Location solver descriptions
+    public const string LOCATION_SOLVER_ERROR = "An error occurred in the location solver.";
+    #endregion
 
 }
 
