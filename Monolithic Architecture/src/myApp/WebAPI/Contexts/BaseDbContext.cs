@@ -40,7 +40,7 @@ public class BaseDbContext : DbContext
         builder.Entity<CustomerWarehouseCost>().Property(u => u.Cost).HasColumnName("Cost").IsRequired();
 
         builder.Entity<CustomerWarehouseCost>().HasOne(u => u.Warehouse).WithMany().HasForeignKey(u => u.WarehouseID);
-        builder.Entity<CustomerWarehouseCost>().HasOne(u => u.Customer).WithMany().HasForeignKey(u => u.CustomerId);
+        builder.Entity<CustomerWarehouseCost>().HasOne(u => u.Customer).WithMany(c => c.CustomerWarehouseCosts).HasForeignKey(u => u.CustomerId);
         #endregion
 
         #region Email Authenticator Model Creation

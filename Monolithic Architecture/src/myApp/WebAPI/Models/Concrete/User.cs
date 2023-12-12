@@ -1,4 +1,5 @@
-﻿using WebAPI.Models.Enums;
+﻿using System.ComponentModel.DataAnnotations;
+using WebAPI.Models.Enums;
 
 namespace WebAPI.Models.Concrete;
 

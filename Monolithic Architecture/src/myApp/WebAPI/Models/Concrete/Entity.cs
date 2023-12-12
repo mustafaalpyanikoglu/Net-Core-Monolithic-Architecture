@@ -1,4 +1,6 @@
-﻿namespace WebAPI.Models.Concrete
+﻿using ServiceStack.DataAnnotations;
+
+namespace WebAPI.Models.Concrete
 {
     public class Entity
     {

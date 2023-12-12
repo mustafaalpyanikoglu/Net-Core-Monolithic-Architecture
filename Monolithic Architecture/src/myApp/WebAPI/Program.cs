@@ -1,14 +1,20 @@
 using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using WebAPI;
+using WebAPI.Models.Dtos.AuthDtos;
 using WebAPI.Security.Encyrption;
 using WebAPI.Security.Jwt;
+using WebAPI.ValidationRules.FluentValidation;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+builder.Services.AddScoped<IValidator<UserForRegisterDto>, UserForRegisteredDtoValidator>();
+builder.Services.AddScoped<IValidator<UserForLoginDto>, UserForLoginDtoValidator>();
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();

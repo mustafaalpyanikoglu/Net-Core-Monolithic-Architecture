@@ -18,6 +18,9 @@ using System.Security.Claims;
 using WebAPI.Security.SecurityExtensions;
 using System.Security.Cryptography;
 using WebAPI.CrossCuttingConcerns.Exceptions;
+using WebAPI.Models.Enums;
+using static WebAPI.Models.Constants.PathConstant;
+using FluentValidation;
 
 
 namespace WebAPI.Controllers;
@@ -27,14 +30,161 @@ namespace WebAPI.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IMapper _mapper;
-    private readonly TokenOptions _tokenOptions;
+    private readonly WebAPI.Security.Jwt.TokenOptions _tokenOptions;
     private DateTime _accessTokenExpiration;
+    private readonly IValidator<UserForRegisterDto> _userForRegisterDtoValidator;
+    private readonly IValidator<UserForLoginDto> _userForLoginDtoValidator;
 
-    public AuthController(IMapper mapper, IConfiguration configuration)
+    public AuthController(
+        IMapper mapper, 
+        IConfiguration configuration, 
+        IValidator<UserForRegisterDto> userForRegisterDtoValidator,
+        IValidator<UserForLoginDto> userForLoginDtoValidator)
     {
         _mapper = mapper;
-        _tokenOptions = configuration.GetSection("TokenOptions").Get<TokenOptions>();
+        _tokenOptions = configuration.GetSection("TokenOptions").Get<WebAPI.Security.Jwt.TokenOptions>();
+        _userForRegisterDtoValidator = userForRegisterDtoValidator;
+        _userForLoginDtoValidator = userForLoginDtoValidator;
     }
+
+
+    [ProducesResponseType(typeof(AccessToken), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorModel), StatusCodes.Status400BadRequest)]
+    [SwaggerOperation(description: ResponseDescriptions.AUTH_REGISTER)]
+    [HttpPost("Register")]
+    public async Task<IActionResult> Register([FromBody] UserForRegisterDto userForRegisterDto)
+    {
+        try
+        {
+            ValidationContext<UserForRegisterDto> validatorContext = new ValidationContext<UserForRegisterDto>(userForRegisterDto);
+            IEnumerable<ValidationExceptionModel> errors = _userForRegisterDtoValidator.Validate(validatorContext)
+                .Errors
+                .Where(failure => failure != null)
+                .GroupBy(
+                    keySelector: p => p.PropertyName,
+                    resultSelector: (propertyName, errors) =>
+                        new ValidationExceptionModel { Property = propertyName, Errors = errors.Select(e => e.ErrorMessage) }
+                )
+                .ToList();
+            if (errors.Any()) throw new WebAPI.CrossCuttingConcerns.Exceptions.Types.ValidationException(errors);
+
+            User? user;
+            RegisteredDto registeredDto = new();
+            using (var context = new BaseDbContext())
+            {
+                user = await context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == userForRegisterDto.Email);
+
+                if (user is not null) throw new BusinessException(USER_EMAL_ALREADY_EXISTS);
+
+                byte[] passwordHash, passwordSalt;
+                HashingHelper.CreatePasswordHash(userForRegisterDto.Password, out passwordHash, out passwordSalt);
+
+                User newUser = new()
+                {
+                    Email = userForRegisterDto.Email,
+                    FirstName = userForRegisterDto.FirstName,
+                    LastName = userForRegisterDto.LastName,
+                    PhoneNumber = userForRegisterDto.PhoneNumber,
+                    Address = userForRegisterDto.Address,
+                    PasswordHash = passwordHash,
+                    PasswordSalt = passwordSalt,
+                    UserStatus = false,
+                    ImageUrl = DEFAULT_IMAGE_URL,
+                    RegistrationDate = DateTime.UtcNow,
+                    AuthenticatorType = AuthenticatorType.Email,
+                    PasswordResetKey = null,
+                };
+
+                context.Entry(newUser).State = EntityState.Added;
+                await context.SaveChangesAsync();
+
+                User? createdUser = await context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == userForRegisterDto.Email);
+                if (createdUser is null) throw new BusinessException(FAILED_TO_SAVE_USER);
+
+
+                EmailAuthenticator emailAuthenticator = new()
+                {
+                    UserId = createdUser.Id,
+                    ActivationKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                    IsVerified = false
+                };
+                context.Entry(emailAuthenticator).State = EntityState.Added;
+
+                IList<OperationClaim> operationClaims;
+                operationClaims = await context.UserOperationClaims
+                    .AsNoTracking()
+                    .Where(p => p.UserId == createdUser.Id)
+                    .Select(p => new OperationClaim
+                    {
+                        Id = p.OperationClaimId,
+                        Name = p.OperationClaim.Name
+                    }).ToListAsync();
+                registeredDto.AccessToken = CreateToken(createdUser, operationClaims);
+                registeredDto.AccessToken.Email = createdUser.Email;
+                registeredDto.AccessToken.FirstName = createdUser.FirstName;
+                registeredDto.AccessToken.LastName = createdUser.LastName;
+                registeredDto.AccessToken.UserID = createdUser.Id;
+                if (operationClaims.FirstOrDefault() is not null)
+                    registeredDto.AccessToken.OperationClaimName = operationClaims.FirstOrDefault().Name;
+
+
+                registeredDto.RefreshToken = CreateRefreshToken(createdUser, "");
+                context.Entry(registeredDto.RefreshToken).State = EntityState.Added;
+
+                IList<RefreshToken> refreshTokens = await context.RefreshTokens
+                 .Where(r => r.UserId == createdUser.Id &&
+                             r.Revoked == null && r.Expires >= DateTime.UtcNow &&
+                             r.Created.AddDays(_tokenOptions.RefreshTokenTTL) <= DateTime.UtcNow)
+                 .ToListAsync();
+                foreach (RefreshToken refreshToken in refreshTokens) context.Entry(refreshToken).State = EntityState.Deleted;
+
+                await context.SaveChangesAsync();
+            }
+            if (registeredDto.RefreshToken is not null) setRefreshTokenToCookie(registeredDto.RefreshToken);
+
+            return Ok(registeredDto.AccessToken);
+        }
+        catch (BusinessException ex)
+        {
+            return BadRequest(new ErrorModel()
+            {
+                Type = "https://example.com/probs/business",
+                Title = "Rule Validation",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest,
+                Instance = ""
+            });
+
+        }
+        catch (WebAPI.CrossCuttingConcerns.Exceptions.Types.ValidationException ex)
+        {
+            //return BadRequest(new WebAPI.CrossCuttingConcerns.Exceptions.HttpProblemDetails.ValidationProblemDetails(ex.Errors));
+            return BadRequest(new ErrorModel()
+            {
+                Failures = ex.Errors.Select(validationException =>
+                new Failure
+                {
+                    Property = validationException.Property ?? string.Empty,
+                    Errors = validationException.Errors?.ToList() ?? new List<string>()
+                }).ToList(),
+                Type = "ValidationException",
+                Title = "Validation Errors",
+                Detail = "One or more validation errors occurred.",
+                Status = StatusCodes.Status400BadRequest,
+                Instance = ""
+            });
+        }
+        catch (Exception ex)
+        {
+            // Diğer hata durumları...
+            return StatusCode(500, new { message = SERVER_ERROR });
+        }
+    }
+
 
     [ProducesResponseType(typeof(LoggedResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorModel), StatusCodes.Status401Unauthorized)]
@@ -44,6 +194,19 @@ public class AuthController : ControllerBase
     {
         try
         {
+            ValidationContext<UserForLoginDto> validatorContext = new ValidationContext<UserForLoginDto>(userForLoginDto);
+            IEnumerable<ValidationExceptionModel> errors = _userForLoginDtoValidator.Validate(validatorContext)
+                .Errors
+                .Where(failure => failure != null)
+                .GroupBy(
+                    keySelector: p => p.PropertyName,
+                    resultSelector: (propertyName, errors) =>
+                        new ValidationExceptionModel { Property = propertyName, Errors = errors.Select(e => e.ErrorMessage) }
+                )
+                .ToList();
+            if (errors.Any()) throw new WebAPI.CrossCuttingConcerns.Exceptions.Types.ValidationException(errors);
+
+
             User? user;
             LoggedDto loggedDto = new();
             using (var context = new BaseDbContext())
@@ -96,19 +259,31 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new ErrorModel()
             {
-                Failures = new List<Failure>
+                Type = "https://example.com/probs/business",
+                Title = "Rule Validation",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest,
+                Instance = ""
+            });
+
+        }
+        catch (WebAPI.CrossCuttingConcerns.Exceptions.Types.ValidationException ex)
+        {
+            //return BadRequest(new WebAPI.CrossCuttingConcerns.Exceptions.HttpProblemDetails.ValidationProblemDetails(ex.Errors));
+            return BadRequest(new ErrorModel()
+            {
+                Failures = ex.Errors.Select(validationException =>
+                new Failure
                 {
-                    new Failure
-                    {
-                        Errors = new List<string> { ex.Message }
-                    }
-                },
-                Type = "BusinessException",
+                    Property = validationException.Property ?? string.Empty,
+                    Errors = validationException.Errors?.ToList() ?? new List<string>()
+                }).ToList(),
+                Type = "ValidationException",
                 Title = "Validation Errors",
                 Detail = "One or more validation errors occurred.",
                 Status = StatusCodes.Status400BadRequest,
                 Instance = ""
-            }); 
+            });
         }
         catch (Exception ex)
         {
@@ -116,6 +291,7 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { message = "Internal Server Error" });
         }
     }
+
     private AccessToken CreateToken(User user, IList<OperationClaim> operationClaims)
     {
         _accessTokenExpiration = DateTime.Now.AddMinutes(_tokenOptions.AccessTokenExpiration);
@@ -143,7 +319,7 @@ public class AuthController : ControllerBase
     }
 
     private JwtSecurityToken CreateJwtSecurityToken(
-        TokenOptions tokenOptions,
+        WebAPI.Security.Jwt.TokenOptions tokenOptions,
         User user,
         SigningCredentials signingCredentials,
         IList<OperationClaim> operationClaims
@@ -184,4 +360,5 @@ public class AuthController : ControllerBase
         CookieOptions cookieOptions = new() { HttpOnly = true, Expires = DateTime.UtcNow.AddDays(7) };
         Response.Cookies.Append("refreshToken", refreshToken.Token, cookieOptions);
     }
+
 }
