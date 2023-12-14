@@ -5,16 +5,26 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using WebAPI;
 using WebAPI.Models.Dtos.AuthDtos;
+using WebAPI.Models.Dtos.WarehousesDtos;
 using WebAPI.Security.Encyrption;
 using WebAPI.Security.Jwt;
 using WebAPI.ValidationRules.FluentValidation;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("admin", policy => policy.RequireRole("admin"));
+    options.AddPolicy("user", policy => policy.RequireRole("admin"));
+});
+
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
+// Adding as a validation service for a specific DTO type the
+// service that performs the validation of objects of that type.
 builder.Services.AddScoped<IValidator<UserForRegisterDto>, UserForRegisteredDtoValidator>();
 builder.Services.AddScoped<IValidator<UserForLoginDto>, UserForLoginDtoValidator>();
+builder.Services.AddScoped<IValidator<CreatedWarehouseDto>, CreatedWarehouseDtoValidator>();
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
