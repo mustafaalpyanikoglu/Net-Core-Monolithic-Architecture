@@ -152,17 +152,15 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new ErrorModel()
             {
-                Type = "https://example.com/probs/business",
-                Title = "Rule Validation",
+                Type = BUSINESS_ERROR_TYPE,
+                Title = BUSINESS_ERROR_TITLE,
                 Detail = ex.Message,
                 Status = StatusCodes.Status400BadRequest,
-                Instance = ""
+                Instance = BUSINESS_ERROR_INSTANCE
             });
-
         }
         catch (WebAPI.CrossCuttingConcerns.Exceptions.Types.ValidationException ex)
         {
-            //return BadRequest(new WebAPI.CrossCuttingConcerns.Exceptions.HttpProblemDetails.ValidationProblemDetails(ex.Errors));
             return BadRequest(new ErrorModel()
             {
                 Failures = ex.Errors.Select(validationException =>
@@ -171,11 +169,11 @@ public class AuthController : ControllerBase
                     Property = validationException.Property ?? string.Empty,
                     Errors = validationException.Errors?.ToList() ?? new List<string>()
                 }).ToList(),
-                Type = "ValidationException",
-                Title = "Validation Errors",
-                Detail = "One or more validation errors occurred.",
+                Type = VALIDATION_ERROR_TYPE,
+                Title = VALIDATION_ERROR_TITLE,
+                Detail = VALIDATION_ERROR_DETAIL,
                 Status = StatusCodes.Status400BadRequest,
-                Instance = ""
+                Instance = VALIDATION_ERROR_INSTANCE
             });
         }
         catch (Exception ex)
@@ -259,17 +257,15 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new ErrorModel()
             {
-                Type = "https://example.com/probs/business",
-                Title = "Rule Validation",
+                Type = BUSINESS_ERROR_TYPE,
+                Title = BUSINESS_ERROR_TITLE,
                 Detail = ex.Message,
                 Status = StatusCodes.Status400BadRequest,
-                Instance = ""
+                Instance = BUSINESS_ERROR_INSTANCE
             });
-
         }
         catch (WebAPI.CrossCuttingConcerns.Exceptions.Types.ValidationException ex)
         {
-            //return BadRequest(new WebAPI.CrossCuttingConcerns.Exceptions.HttpProblemDetails.ValidationProblemDetails(ex.Errors));
             return BadRequest(new ErrorModel()
             {
                 Failures = ex.Errors.Select(validationException =>
@@ -278,17 +274,17 @@ public class AuthController : ControllerBase
                     Property = validationException.Property ?? string.Empty,
                     Errors = validationException.Errors?.ToList() ?? new List<string>()
                 }).ToList(),
-                Type = "ValidationException",
-                Title = "Validation Errors",
-                Detail = "One or more validation errors occurred.",
+                Type = VALIDATION_ERROR_TYPE,
+                Title = VALIDATION_ERROR_TITLE,
+                Detail = VALIDATION_ERROR_DETAIL,
                 Status = StatusCodes.Status400BadRequest,
-                Instance = ""
+                Instance = VALIDATION_ERROR_INSTANCE
             });
         }
         catch (Exception ex)
         {
             // Diğer hata durumları...
-            return StatusCode(500, new { message = "Internal Server Error" });
+            return StatusCode(500, new { message = SERVER_ERROR });
         }
     }
 

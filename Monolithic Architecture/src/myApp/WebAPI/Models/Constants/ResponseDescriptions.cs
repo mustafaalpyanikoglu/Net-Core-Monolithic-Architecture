@@ -32,6 +32,12 @@ public static class ResponseDescriptions
     #endregion
 
 
+    #region autherization and authentication fail
+    public const string NOT_AUTHORIZED = "You are not authorized.";
+    public const string NOT_AUTHENTICATED = "You are not authenticated.";
+
+    #endregion
+
     #region User Descriptions
 
     public const string USER_GET_PROFILE = "Giriş yapmış kullanıcının bilgilerini döner. Error Codes : INVALID_USER hata kodları gelebilir.";
@@ -52,6 +58,22 @@ public static class ResponseDescriptions
 
     #region Location solver descriptions
     public const string LOCATION_SOLVER_ERROR = "An error occurred in the location solver.";
+    #endregion
+
+    #region exceptions titel
+    public const string AUTHORIZATION_ERROR_TYPE = "https://example.com/probs/authorization";
+    public const string BUSINESS_ERROR_TYPE = "https://example.com/probs/business";
+    public const string VALIDATION_ERROR_TYPE = "ValidationException";
+
+    public const string AUTHORIZATION_ERROR_INSTANCE = "";
+    public const string BUSINESS_ERROR_INSTANCE = "";
+    public const string VALIDATION_ERROR_INSTANCE = "";
+
+    public const string VALIDATION_ERROR_DETAIL = "One or more validation errors occurred.";
+
+    public const string AUTHORIZATION_ERROR_TITLE = "Authorization error";
+    public const string BUSINESS_ERROR_TITLE = "Rule Validation";
+    public const string VALIDATION_ERROR_TITLE = "Validation Errors";
     #endregion
 
 }

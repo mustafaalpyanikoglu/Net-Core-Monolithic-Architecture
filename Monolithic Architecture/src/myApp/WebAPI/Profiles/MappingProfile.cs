@@ -4,6 +4,7 @@ using WebAPI.Models.Dtos.CustomerDtos;
 using WebAPI.Models.Dtos.CustomerWarehouseCostsDtos;
 using WebAPI.Models.Dtos.UserDtos;
 using WebAPI.Models.Dtos.WarehousesDtos;
+using WebAPI.Paging;
 
 namespace WebAPI.Profiles;
 
@@ -31,6 +32,8 @@ public class MappingProfile : Profile
         CreateMap<User, CreatedUserDto>().ReverseMap();
         CreateMap<User, DeletedUserDto>().ReverseMap();
         CreateMap<User, UserDto>().ReverseMap();
+        CreateMap<User, UserListDto>().ReverseMap();
+        CreateMap<IPaginate<User>, UserListModel>().ReverseMap();
         CreateMap<User, UserListDto>().ReverseMap();
         #endregion
 
